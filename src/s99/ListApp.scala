@@ -5,7 +5,7 @@ package s99
  */
 object ListApp extends App {
 
-  import ListOp._
+  import s99.ListOp._
 
   println(last(List(1, 1, 2, 3, 5, 8)))
 

@@ -35,6 +35,11 @@ object ListOp {
     go(0, list)
   }
 
+  def isPalindrome[A](list: List[A]): Boolean = {
+    val r = reverse(list)
+    list.zip(r).forall(x => x._1 == x._2)
+  }
+
   def reverse[A](list: List[A]): List[A] = {
     def go(acc: List[A], left: List[A]): List[A] =
       left match {
@@ -43,11 +48,6 @@ object ListOp {
       }
 
     go(Nil, list)
-  }
-
-  def isPalindrome[A](list: List[A]): Boolean = {
-    val r = reverse(list)
-    list.zip(r).forall(x => x._1 == x._2)
   }
 
   //  def flatten[A](ll: List[List[A]]): List[A] = {
