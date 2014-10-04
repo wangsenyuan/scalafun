@@ -13,6 +13,7 @@ object ListApp extends App {
 
   println(nth(2, List(1, 1, 2, 3, 5, 8)))
 
+
   println(length(List(1, 1, 2, 3, 5, 8)))
 
   println(reverse(List(1, 1, 2, 3, 5, 8)))
