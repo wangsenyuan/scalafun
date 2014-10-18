@@ -3,13 +3,43 @@ package s99
 /**
  * Created by senyuanwang on 14-10-7.
  */
-sealed abstract class Tree[+T]
+sealed abstract class Tree[+T] {
+  def addValue[U >: T <% Ordered[U]](x: U): Tree[U]
+
+  def isMirrorOf[U >: T](that: Tree[U]): Boolean
+
+  def isSymmetric: Boolean =
+    this match {
+      case End => true
+      case Node(_, l, r) => l.isMirrorOf(r)
+    }
+}
 
 case class Node[+T](value: T, left: Tree[T], right: Tree[T]) extends Tree[T] {
+  def addValue[U >: T <% Ordered[U]](x: U): Tree[U] = {
+    if (x < value) {
+      Node(value, left.addValue(x), right)
+    } else if (x > value) {
+      Node(value, left, right.addValue(x))
+    } else {
+      this
+    }
+  }
+
+  def isMirrorOf[U >: T](that: Tree[U]): Boolean =
+    that match {
+      case Node(_, l, r) => left.isMirrorOf(r) && right.isMirrorOf(l)
+      case _ => false
+    }
+
   override def toString = "T(" + value.toString + " " + left.toString + " " + right.toString + ")"
 }
 
 case object End extends Tree[Nothing] {
+  def addValue[U <% Ordered[U]](x: U) = Node(x)
+
+  def isMirrorOf[T](that: Tree[T]) = that == End
+
   override def toString = "."
 }
 
@@ -30,4 +60,7 @@ object Tree {
       lesserSubtrees.flatMap(l => greaterSubtrees.flatMap(g => List(Node(value, l, g), Node(value, g, l))))
     }
   }
+
+  def fromList[T <% Ordered[T]](xs: List[T]): Tree[T] =
+    xs.foldLeft(End: Tree[T])((t, x) => t.addValue(x))
 }
