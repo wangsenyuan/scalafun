@@ -1,4 +1,4 @@
-package s99
+package s99.tree
 
 /**
  * Created by senyuanwang on 14-10-7.
@@ -63,4 +63,28 @@ object Tree {
 
   def fromList[T <% Ordered[T]](xs: List[T]): Tree[T] =
     xs.foldLeft(End: Tree[T])((t, x) => t.addValue(x))
+
+  def symmetricBalancedTrees[T](n: Int, x: T): List[Tree[T]] =
+    cBalanced(n, x).filter(_.isSymmetric)
+
+  def hbalTrees[T](height: Int, x: T): List[Tree[T]] = height match {
+    case n if n < 1 => List(End)
+    case n if n == 1 => List(Node(x))
+    case n =>
+      val lessOne = hbalTrees(n - 1, x)
+      val lessTwo = hbalTrees(n - 2, x)
+
+      val subTree1 = for {
+        a <- lessOne
+        b <- lessOne
+      } yield Node(x, a, b)
+
+      val subTree2 = for {
+        a <- lessOne
+        b <- lessTwo
+      } yield List(Node(x, a, b), Node(x, b, a))
+
+      subTree1 ::: (subTree2.flatten)
+
+  }
 }
