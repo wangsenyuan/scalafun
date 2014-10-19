@@ -13,6 +13,14 @@ sealed abstract class Tree[+T] {
       case End => true
       case Node(_, l, r) => l.isMirrorOf(r)
     }
+
+  def size: Int
+
+  def leafCount: Int
+
+  def internalList: List[T]
+
+  def leafList: List[T]
 }
 
 case class Node[+T](value: T, left: Tree[T], right: Tree[T]) extends Tree[T] {
@@ -33,6 +41,23 @@ case class Node[+T](value: T, left: Tree[T], right: Tree[T]) extends Tree[T] {
     }
 
   override def toString = "T(" + value.toString + " " + left.toString + " " + right.toString + ")"
+
+  override def size: Int = 1 + left.size + right.size
+
+  override def leafCount: Int = (left, right) match {
+    case (End, End) => 1
+    case (l, r) => l.leafCount + r.leafCount
+  }
+
+  def internalList: List[T] = (left, right) match {
+    case (End, End) => Nil
+    case _ => value :: left.internalList ::: right.internalList
+  }
+
+  def leafList: List[T] = (left, right) match {
+    case (End, End) => List(value)
+    case _ => left.leafList ::: right.leafList
+  }
 }
 
 case object End extends Tree[Nothing] {
@@ -41,6 +66,14 @@ case object End extends Tree[Nothing] {
   def isMirrorOf[T](that: Tree[T]) = that == End
 
   override def toString = "."
+
+  override def size: Int = 0
+
+  override def leafCount: Int = 0
+
+  override def internalList: List[Nothing] = Nil
+
+  override def leafList: List[Nothing] = Nil
 }
 
 object Node {
@@ -63,6 +96,7 @@ object Tree {
 
   def fromList[T <% Ordered[T]](xs: List[T]): Tree[T] =
     xs.foldLeft(End: Tree[T])((t, x) => t.addValue(x))
+
 
   def symmetricBalancedTrees[T](n: Int, x: T): List[Tree[T]] =
     cBalanced(n, x).filter(_.isSymmetric)
@@ -87,4 +121,25 @@ object Tree {
       subTree1 ::: (subTree2.flatten)
 
   }
+
+  def minHbalNodes(height: Int): Int = {
+    def go: Stream[Int] =
+      0 #:: 1 #:: go.zip(go.tail).map(x => x._1 + x._2 + 1)
+
+    go.take(height + 1).last
+  }
+
+  def minHbalHeight(nodes: Int): Int =
+    if (nodes == 0) 0
+    else minHbalHeight(nodes / 2) + 1
+
+  def maxHbalHeight(nodes: Int): Int = {
+    def go: Stream[Int] =
+      0 #:: 1 #:: go.zip(go.tail).map(x => x._1 + x._2 + 1)
+
+    go.zipWithIndex.takeWhile(x => x._1 <= nodes).last._2
+  }
+
+  def hbalTreesWithNodes[T](nodes: Int, value: T): List[Tree[T]] =
+    (minHbalHeight(nodes) to maxHbalHeight(nodes)).flatMap(hbalTrees(_, value)).filter(_.size == nodes).toList
 }
