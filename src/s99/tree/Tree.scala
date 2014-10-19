@@ -21,6 +21,8 @@ sealed abstract class Tree[+T] {
   def internalList: List[T]
 
   def leafList: List[T]
+
+  def atLevel(level: Int): List[T]
 }
 
 case class Node[+T](value: T, left: Tree[T], right: Tree[T]) extends Tree[T] {
@@ -58,6 +60,13 @@ case class Node[+T](value: T, left: Tree[T], right: Tree[T]) extends Tree[T] {
     case (End, End) => List(value)
     case _ => left.leafList ::: right.leafList
   }
+
+  override def atLevel(level: Int): List[T] =
+    level match {
+      case 0 => Nil
+      case 1 => List(value)
+      case x => left.atLevel(x - 1) ::: right.atLevel(x - 1)
+    }
 }
 
 case object End extends Tree[Nothing] {
@@ -74,6 +83,8 @@ case object End extends Tree[Nothing] {
   override def internalList: List[Nothing] = Nil
 
   override def leafList: List[Nothing] = Nil
+
+  override def atLevel(level: Int): List[Nothing] = Nil
 }
 
 object Node {
@@ -119,7 +130,6 @@ object Tree {
       } yield List(Node(x, a, b), Node(x, b, a))
 
       subTree1 ::: (subTree2.flatten)
-
   }
 
   def minHbalNodes(height: Int): Int = {
@@ -142,4 +152,12 @@ object Tree {
 
   def hbalTreesWithNodes[T](nodes: Int, value: T): List[Tree[T]] =
     (minHbalHeight(nodes) to maxHbalHeight(nodes)).flatMap(hbalTrees(_, value)).filter(_.size == nodes).toList
+
+  def completeBinaryTree[T](nodes: Int, value: T): Tree[T] = {
+    def go(x: Int): Tree[T] =
+      if (x > nodes) End
+      else Node(value, go(2 * x), go(2 * x + 1))
+
+    go(1)
+  }
 }
