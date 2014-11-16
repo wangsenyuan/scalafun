@@ -23,6 +23,29 @@ sealed abstract class Tree[+T] {
   def leafList: List[T]
 
   def atLevel(level: Int): List[T]
+
+  def layoutBinaryTree = layoutBinaryTreeInternal(1, 1)._1
+
+  def layoutBinaryTreeInternal(x: Int, y: Int): (Tree[T], Int)
+
+  def treeDepth: Int
+
+  def leftmostNodeDepth: Int
+
+  def layoutBinaryTree2: Tree[T] = {
+    val d = treeDepth
+    val x0 = (2 to leftmostNodeDepth).map((n) => Math.pow(2, d - n).toInt).reduceLeft(_ + _) + 1
+    layoutBinaryTree2Internal(x0, 1, d - 2)
+  }
+
+  def layoutBinaryTree2Internal(x: Int, depth: Int, exp: Int): Tree[T]
+
+  def bounds: List[(Int, Int)]
+
+  def layoutBinaryTree3: Tree[T] =
+    layoutBinaryTree3Internal(bounds.map(_._1).reduceLeft(_ min _) * -1 + 1, 1)
+
+  def layoutBinaryTree3Internal(x: Int, depth: Int): Tree[T]
 }
 
 case class Node[+T](value: T, left: Tree[T], right: Tree[T]) extends Tree[T] {
@@ -42,7 +65,10 @@ case class Node[+T](value: T, left: Tree[T], right: Tree[T]) extends Tree[T] {
       case _ => false
     }
 
-  override def toString = "T(" + value.toString + " " + left.toString + " " + right.toString + ")"
+  override def toString = (left, right) match {
+    case (End, End) => s"$value"
+    case (_, _) => s"$value($left,$right)"
+  }
 
   override def size: Int = 1 + left.size + right.size
 
@@ -67,6 +93,49 @@ case class Node[+T](value: T, left: Tree[T], right: Tree[T]) extends Tree[T] {
       case 1 => List(value)
       case x => left.atLevel(x - 1) ::: right.atLevel(x - 1)
     }
+
+  def layoutBinaryTreeInternal(x: Int, depth: Int): (Tree[T], Int) = {
+    val (leftTree, myX) = left.layoutBinaryTreeInternal(x, depth + 1)
+    val (rightTree, nextX) = right.layoutBinaryTreeInternal(myX + 1, depth + 1)
+    (PositionedNode(value, leftTree, rightTree, myX, depth), nextX)
+  }
+
+  def treeDepth: Int = (left.treeDepth max right.treeDepth) + 1
+
+  def leftmostNodeDepth: Int = left.leftmostNodeDepth + 1
+
+  def layoutBinaryTree2Internal(x: Int, depth: Int, exp: Int): Tree[T] =
+    PositionedNode(
+      value,
+      left.layoutBinaryTree2Internal(x - Math.pow(2, exp).toInt, depth + 1, exp - 1),
+      right.layoutBinaryTree2Internal(x + Math.pow(2, exp).toInt, depth + 1, exp - 1),
+      x, depth)
+
+  def bounds: List[(Int, Int)] = {
+    def lowerBounds = (left.bounds, right.bounds) match {
+      case (Nil, Nil) => Nil
+      case (lb, Nil) => lb.map((b) => (b._1 - 1, b._2 - 1))
+      case (Nil, rb) => rb.map((b) => (b._1 + 1, b._2 + 1))
+      case (lb, rb) => {
+        val shift = lb.zip(rb).map((e) => (e._1._2 - e._2._1) / 2 + 1).reduceLeft(_ max _)
+        lb.map(Some(_)).zipAll(rb.map(Some(_)), None, None).map(_ match {
+          case (Some((a, b)), Some((c, d))) => (a - shift, d + shift)
+          case (Some((a, b)), None) => (a - shift, b - shift)
+          case (None, Some((c, d))) => (c + shift, d + shift)
+          case (None, None) => throw new Exception // Placate the compiler; can't get here.
+        })
+      }
+    }
+    (0, 0) :: lowerBounds
+  }
+
+  def layoutBinaryTree3Internal(x: Int, depth: Int): Tree[T] = bounds match {
+    case _ :: (bl, br) :: _ => PositionedNode(
+      value, left.layoutBinaryTree3Internal(x + bl, depth + 1),
+      right.layoutBinaryTree3Internal(x + br, depth + 1), x, depth)
+    case _ => PositionedNode(value, End, End, x, depth)
+  }
+
 }
 
 case object End extends Tree[Nothing] {
@@ -74,7 +143,7 @@ case object End extends Tree[Nothing] {
 
   def isMirrorOf[T](that: Tree[T]) = that == End
 
-  override def toString = "."
+  override def toString = ""
 
   override def size: Int = 0
 
@@ -85,10 +154,31 @@ case object End extends Tree[Nothing] {
   override def leafList: List[Nothing] = Nil
 
   override def atLevel(level: Int): List[Nothing] = Nil
+
+  def layoutBinaryTreeInternal(x: Int, depth: Int) = (End, x)
+
+  def treeDepth: Int = 0
+
+  def leftmostNodeDepth: Int = 0
+
+  def layoutBinaryTree2Internal(x: Int, depth: Int, exp: Int) = End
+
+  def bounds: List[(Int, Int)] = Nil
+
+  def layoutBinaryTree3Internal(x: Int, depth: Int) = End
 }
 
 object Node {
   def apply[T](value: T): Node[T] = Node(value, End, End)
+}
+
+class PositionedNode[+T](override val value: T, override val left: Tree[T], override val right: Tree[T],
+                         x: Int, y: Int) extends Node[T](value, left, right) {
+  override def toString = "T[" + x.toString + "," + y.toString + "](" + value.toString + " " + left.toString + " " + right.toString + ")"
+}
+
+object PositionedNode {
+  def apply[T](value: T, left: Tree[T], right: Tree[T], x: Int, y: Int) = new PositionedNode[T](value, left, right, x, y)
 }
 
 object Tree {
@@ -160,4 +250,31 @@ object Tree {
 
     go(1)
   }
+
+  def fromString(str: String): Tree[Char] = {
+    def split(x: String, i: Int, level: Int): (String, String) =
+      if (i >= x.length) {
+        ("", "")
+      } else {
+        val c = x.charAt(i)
+        if (c == ',' && level == 0) {
+          (x.substring(0, i), x.substring(i + 1))
+        } else if (c == '(') {
+          split(x, i + 1, level + 1)
+        } else if (c == ')') {
+          split(x, i + 1, level - 1)
+        } else {
+          split(x, i + 1, level)
+        }
+      }
+
+    if (str.isEmpty) End
+    else if (str.size == 1) Node(str.charAt(0), End, End)
+    else {
+      val c = str.charAt(0)
+      val (left, right) = split(str.substring(2, str.length - 1), 0, 0)
+      Node(c, fromString(left), fromString(right))
+    }
+  }
+
 }

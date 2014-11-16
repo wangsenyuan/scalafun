@@ -33,4 +33,10 @@ object TreeApp extends App {
   println(Node('a', Node('b'), Node('c', Node('d'), Node('e'))).atLevel(2))
 
   println(completeBinaryTree(6, "x"))
+
+  println(Node('a', Node('b', End, Node('c')), Node('d')).layoutBinaryTree)
+
+  println(Node('a', Node('b', Node('d'), Node('e')), Node('c', End, Node('f', Node('g'), End))).toString)
+
+  println(Tree.fromString("a(b(d,e),c(,f(g,)))"))
 }
